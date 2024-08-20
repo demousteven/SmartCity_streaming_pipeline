@@ -1,0 +1,17 @@
+Breakdown of the Script
+Imports:
+
+tweepy: Library for accessing the Twitter API.
+pandas: Library for data manipulation and saving data to CSV.
+run_twitter_etl Function:
+
+API Credentials: Stores the keys and tokens needed for authentication.
+Authentication: Uses tweepy.OAuthHandler to authenticate and set up access to the Twitter API.
+API Object: Creates an API object with rate limit handling to manage request limits.
+Fetch Tweets: Retrieves tweets from a user's timeline with specified parameters.
+Process Tweets: Loops through fetched tweets, extracts relevant data, and stores it in a list.
+Create DataFrame: Converts the list of tweet data into a pandas DataFrame.
+Save to CSV: Saves the DataFrame to a CSV file for further analysis or storage.
+Main Block:
+
+Check Script Execution: Ensures that run_twitter_etl is called only when the script is run directly, not when imported as a module.

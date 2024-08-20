@@ -1,0 +1,18 @@
+Breakdown of the Script
+Imports:
+
+timedelta and datetime: Used for defining time-related settings.
+DAG, PythonOperator: Core classes from Airflow for defining a Directed Acyclic Graph (DAG) and Python tasks.
+run_twitter_etl: The custom Python function to be executed by the operator.
+default_args Dictionary:
+
+Sets default parameters for the DAG, including owner, retry behavior, and notification settings.
+dag Definition:
+
+Creates an instance of the DAG class, specifying the DAG's ID, default arguments, description, and scheduling interval.
+run_etl Task:
+
+Defines a PythonOperator that will execute the run_twitter_etl function as part of the DAG.
+Task Setup:
+
+The run_etl task is added to the DAG. If you have multiple tasks, you would use additional methods to set task dependencies.

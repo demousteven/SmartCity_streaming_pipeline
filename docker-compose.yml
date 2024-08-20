@@ -1,0 +1,105 @@
+# This section defines a common configuration for Spark workers, 
+# which can be reused for multiple worker instances.
+x-spark-common: &spark-common
+  image: bitnami/spark:latest  # The Docker image to use for Spark
+  volumes:
+    - ./jobs:/opt/bitnami/spark/jobs  # Mount the jobs directory from the host to the container
+  command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+  # Command to start the Spark worker and connect it to the Spark master
+  depends_on:
+    - spark-master  # Ensure that the Spark master is started before this worker
+  environment:
+    SPARK_MODE: Worker  # Specify the Spark mode as a Worker
+    SPARK_WORKER_CORES: 2  # Number of CPU cores allocated to the worker
+    SPARK_WORKER_MEMORY: 1g  # Memory allocated to the worker
+    SPARK_MASTER_URL: spark://spark-master:7077  # URL of the Spark master
+  networks:
+    - datamasterylab  # Connect the worker to the 'datamasterylab' network
+
+services:
+  # Zookeeper service, which is required by Kafka for managing brokers and clusters.
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0  # Zookeeper Docker image
+    hostname: zookeeper  # Hostname for the Zookeeper container
+    container_name: zookeeper  # Name of the Zookeeper container
+    ports:
+      - "2181:2181"  # Expose Zookeeper port 2181 for communication
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181  # Port for client connections
+      ZOOKEEPER_TICK_TIME: 2000  # Basic time unit in milliseconds for Zookeeper
+    healthcheck:
+      # Healthcheck command to verify Zookeeper is running
+      test: ['CMD', 'bash', '-c', "echo 'ruok' | nc localhost 2181"]
+      interval: 10s  # Healthcheck interval
+      timeout: 5s  # Healthcheck timeout
+      retries: 5  # Number of retries before considering the service unhealthy
+    networks:
+      - datamasterylab  # Connect Zookeeper to the 'datamasterylab' network
+
+  # Kafka broker service, which depends on Zookeeper.
+  broker:
+    image: confluentinc/cp-server:7.4.0  # Kafka broker Docker image
+    hostname: broker  # Hostname for the Kafka broker container
+    container_name: broker  # Name of the Kafka broker container
+    depends_on:
+      zookeeper:
+        condition: service_healthy  # Ensure Zookeeper is healthy before starting the broker
+    ports:
+      - "9092:9092"  # Expose Kafka broker port 9092 for communication
+      - "9101:9101"  # Expose JMX monitoring port 9101
+    environment:
+      KAFKA_BROKER_ID: 1  # Unique ID for the Kafka broker
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'  # Zookeeper connection string
+      # Protocol mapping for Kafka listeners
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # Advertised listeners for external clients
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter  # Metrics reporter class
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # Replication factor for offset topics
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  # Delay before consumer group rebalancing
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1  # Replication factor for license topics
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1  # Replication factor for balancer topics
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1  # Minimum in-sync replicas for transaction logs
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1  # Replication factor for transaction logs
+      KAFKA_JMX_PORT: 9101  # Port for JMX monitoring
+      KAFKA_JMX_HOSTNAME: localhost  # Hostname for JMX monitoring
+      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081  # Schema Registry URL
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092  # Bootstrap servers for metrics reporter
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1  # Replication factor for metrics topics
+      CONFLUENT_METRICS_ENABLE: 'false'  # Disable Confluent metrics
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'  # Customer ID for Confluent support
+    healthcheck:
+      # Healthcheck command to verify Kafka broker is running
+      test: [ 'CMD', 'bash', '-c', "nc -z localhost 9092" ]
+      interval: 30s  # Healthcheck interval
+      timeout: 10s  # Healthcheck timeout
+      retries: 10  # Number of retries before considering the service unhealthy
+    networks:
+      - datamasterylab  # Connect Kafka broker to the 'datamasterylab' network
+
+  # Spark master service, which manages the Spark cluster.
+  spark-master:
+    image: bitnami/spark:latest  # Spark master Docker image
+    volumes:
+      - ./jobs:/opt/bitnami/spark/jobs  # Mount the jobs directory from the host to the container
+    command: bin/spark-class org.apache.spark.deploy.master.Master  # Command to start the Spark master
+    ports:
+      - "9090:8080"  # Expose Spark master web UI on port 9090
+      - "7077:7077"  # Expose Spark master port 7077 for worker communication
+    networks:
+      - datamasterylab  # Connect Spark master to the 'datamasterylab' network
+
+  # Spark worker services, which will inherit the common configuration defined above.
+  spark-worker-1:
+    <<: *spark-common  # Inherit configuration from the 'spark-common' anchor
+  spark-worker-2:
+    <<: *spark-common  # Inherit configuration from the 'spark-common' anchor
+  # Uncomment the following lines to add more Spark workers as needed
+  # spark-worker-3:
+  #   <<: *spark-common
+  # spark-worker-4:
+  #   <<: *spark-common
+
+# Define the custom network 'datamasterylab' to connect all the services.
+networks:
+  datamasterylab:

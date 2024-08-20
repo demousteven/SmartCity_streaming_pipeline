@@ -1,0 +1,22 @@
+This PySpark script is designed to stream and process real-time data from various Kafka topics, related to a Smart City scenario, and store the processed data in AWS S3. Here's a summary:
+
+Spark Session Setup:
+
+The script starts by initializing a Spark session configured to work with Kafka for streaming data and AWS S3 for data storage.
+Schema Definitions:
+
+Several schemas (vehicleSchema, gpsSchema, trafficSchema, weatherSchema, emergencySchema) are defined to structure the data expected from different Kafka topics.
+Reading Data from Kafka:
+
+A function (read_kafka_topic) is used to read data streams from Kafka topics, parse the JSON data into structured DataFrames according to the defined schemas, and apply a 2-minute watermark for handling late data.
+Writing Data to S3:
+
+Another function (streamWriter) writes the processed streaming data into AWS S3 as Parquet files, with checkpointing to ensure fault tolerance.
+Processing and Storing Data:
+
+The script processes data from five Kafka topics: vehicle_data, gps_data, traffic_data, weather_data, and emergency_data.
+Each data stream is read, processed, and then stored in a corresponding S3 path.
+Stream Execution:
+
+The script initiates the streaming queries and waits for them to run indefinitely, ensuring continuous processing of incoming data.
+Overall, the script facilitates the real-time ingestion, processing, and storage of various types of Smart City data, ensuring scalability and reliability in handling large volumes of streaming data.
